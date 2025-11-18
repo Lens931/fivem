@@ -6,6 +6,7 @@
 #include <ReverseGameData.h>
 #include <CfxSubProcess.h>
 #include <CrossBuildRuntime.h>
+#include <ChildProcessTracker.h>
 
 static std::mutex gameProcessMutex;
 
@@ -70,10 +71,11 @@ void SDKGameProcessManager::StartGame()
 
 	SetEnvironmentVariable(L"CitizenFX_SDK_Guest", NULL);
 
-	if (result)
-	{
-		// set the PID and create the game thread
-		hostData->gamePid = gameProcessInfo.dwProcessId;
+        if (result)
+        {
+                childproc::TrackProcess(gameProcessInfo.hProcess, "sdk game runtime");
+                // set the PID and create the game thread
+                hostData->gamePid = gameProcessInfo.dwProcessId;
 		ResumeThread(gameProcessInfo.hThread);
 
 		SetGameProcessState(SDKGameProcessManager::GameProcessState::GP_RUNNING);

@@ -1,4 +1,5 @@
 #include <StdInc.h>
+#include <ChildProcessTracker.h>
 #include <ExtDownloader.h>
 
 #if 0
@@ -403,11 +404,16 @@ static void StartExtDownloader()
 	const wchar_t* newCommandLine = va(L"\"%s\" --check-certificate=false --stop-with-process=%d --enable-rpc=true --rpc-listen-port=6673 --rpc-secret=%s --console-log-level=warn", MakeRelativeCitPath(L"bin\\aria2c.exe").c_str(), GetCurrentProcessId(), ToWide(g_uuid.substr(6)));
 
 	// and go create the new fake process
-	PROCESS_INFORMATION pi;
-	STARTUPINFO si = { 0 };
-	si.cb = sizeof(STARTUPINFO);
+        PROCESS_INFORMATION pi = {};
+        STARTUPINFO si = { 0 };
+        si.cb = sizeof(STARTUPINFO);
 
-	CreateProcessW(nullptr, const_cast<wchar_t*>(newCommandLine), nullptr, nullptr, FALSE, CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW, &newEnvironment[0], MakeRelativeCitPath(L"").c_str(), &si, &pi);
+        if (CreateProcessW(nullptr, const_cast<wchar_t*>(newCommandLine), nullptr, nullptr, FALSE, CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW, &newEnvironment[0], MakeRelativeCitPath(L"").c_str(), &si, &pi))
+        {
+                childproc::TrackProcess(pi.hProcess, "aria2c downloader");
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+        }
 }
 
 static HookFunction hookFunction([]()

@@ -9,6 +9,7 @@
 #include <queue>
 #include <bitset>
 #include <functional>
+#include <mutex>
 #include <thread>
 #include <ppltasks.h>
 #include <WS2tcpip.h>
@@ -187,7 +188,10 @@ private:
 
 	std::function<void(const std::string&, const std::string&)> m_cardResponseHandler;
 
-	std::vector<uint8_t> m_sendBuffer;
+        std::vector<uint8_t> m_sendBuffer;
+        std::mutex m_sendPacketMutex;
+        std::thread::id m_sendThreadId;
+        bool m_hasSendThreadId = false;
 
 private:
 	typedef std::function<void(const char* buf, size_t len)> ReliableHandlerType;
@@ -243,15 +247,25 @@ public:
 	void SendUnreliablePacket(uint32_t type, const char* buffer, size_t length);
 
 	template<typename Packet>
-	bool SendNetPacket(Packet& packet, bool reliable = true)
-	{
-		static std::thread::id threadId = std::this_thread::get_id();
+        bool SendNetPacket(Packet& packet, bool reliable = true)
+        {
+                std::lock_guard<std::mutex> sendLock(m_sendPacketMutex);
 
-		if (std::this_thread::get_id() != threadId)
-		{
-			trace("Error: SendNetPacket %d called from multiple threads!\n", packet.type.GetValue());
-			return false;
-		}
+                auto currentThread = std::this_thread::get_id();
+
+                if (!m_hasSendThreadId)
+                {
+                        m_sendThreadId = currentThread;
+                        m_hasSendThreadId = true;
+                }
+                else if (currentThread != m_sendThreadId)
+                {
+                        static std::hash<std::thread::id> idHasher;
+                        trace("Warning: SendNetPacket %d serialized from unexpected thread (current=%llu, expected=%llu).\n",
+                                packet.type.GetValue(),
+                                static_cast<unsigned long long>(idHasher(currentThread)),
+                                static_cast<unsigned long long>(idHasher(m_sendThreadId)));
+                }
 
 		static const size_t kMaxSize = net::SerializableComponent::GetMaxSize<Packet>();
 

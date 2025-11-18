@@ -34,6 +34,7 @@ using namespace fx::invoker;
 #ifndef IS_FXSERVER
 #include <CL2LaunchMode.h>
 #include <CfxSubProcess.h>
+#include <ChildProcessTracker.h>
 #endif
 
 #include <rapidjson/writer.h>
@@ -2359,10 +2360,16 @@ void V8ScriptGlobals::Initialize()
 
 			PROCESS_INFORMATION pi;
 
-			if (!CreateProcessW(NULL, const_cast<wchar_t*>(cli), NULL, NULL, FALSE, CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &si, &pi))
-			{
-				trace("failed to exit: %d\n", GetLastError());
-			}
+                        if (!CreateProcessW(NULL, const_cast<wchar_t*>(cli), NULL, NULL, FALSE, CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &si, &pi))
+                        {
+                                trace("failed to exit: %d\n", GetLastError());
+                        }
+                        else
+                        {
+                                childproc::TrackProcess(pi.hProcess, "switchcl helper");
+                                CloseHandle(pi.hProcess);
+                                CloseHandle(pi.hThread);
+                        }
 
 			_wunlink(MakeRelativeCitPath(L"content_index.xml").c_str());
 			TerminateProcess(GetCurrentProcess(), 0);

@@ -18,6 +18,7 @@
 #include <CoreConsole.h>
 #include <ICoreGameInit.h>
 #include <GameInit.h>
+#include <ChildProcessTracker.h>
 #include <ScriptEngine.h>
 #include <ResourceManager.h>
 #include <ResourceEventComponent.h>
@@ -162,16 +163,17 @@ void RestartGameToOtherBuild(int build, int pureLevel, std::wstring poolSizesInc
 
 	PROCESS_INFORMATION pi;
 
-	if (!CreateProcessW(NULL, const_cast<wchar_t*>(cli.c_str()), NULL, NULL, TRUE, CREATE_BREAKAWAY_FROM_JOB | EXTENDED_STARTUPINFO_PRESENT, NULL, NULL, &si.StartupInfo, &pi))
-	{
-		trace("failed to exit: %d\n", GetLastError());
-	}
-	else
-	{
-		// to silence VS analyzers
-		CloseHandle(pi.hProcess);
-		CloseHandle(pi.hThread);
-	}
+        if (!CreateProcessW(NULL, const_cast<wchar_t*>(cli.c_str()), NULL, NULL, TRUE, CREATE_BREAKAWAY_FROM_JOB | EXTENDED_STARTUPINFO_PRESENT, NULL, NULL, &si.StartupInfo, &pi))
+        {
+                trace("failed to exit: %d\n", GetLastError());
+        }
+        else
+        {
+                childproc::TrackProcess(pi.hProcess, "build switch");
+                // to silence VS analyzers
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+        }
 
 	ExitProcess(0x69);
 #endif

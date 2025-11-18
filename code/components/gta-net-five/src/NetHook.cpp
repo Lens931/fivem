@@ -29,6 +29,7 @@
 
 #include <CfxState.h>
 #include <HostSharedData.h>
+#include <ChildProcessTracker.h>
 
 #include "FramePacketHandler.h"
 #include "HeHost.h"
@@ -1420,10 +1421,16 @@ static BOOL ShellExecuteExAHook(SHELLEXECUTEINFOA *pExecInfo)
 	STARTUPINFOW si = { 0 };
 	si.cb = sizeof(si);
 
-	PROCESS_INFORMATION pi;
-	CreateProcessW(NULL, cli, NULL, NULL, FALSE, CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &si, &pi);
-	
-	return TRUE;
+        PROCESS_INFORMATION pi = {};
+
+        if (CreateProcessW(NULL, cli, NULL, NULL, FALSE, CREATE_BREAKAWAY_FROM_JOB, NULL, NULL, &si, &pi))
+        {
+                childproc::TrackProcess(pi.hProcess, "ros switchcl");
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+        }
+
+        return TRUE;
 }
 
 static int* g_clipsetManager_networkState;

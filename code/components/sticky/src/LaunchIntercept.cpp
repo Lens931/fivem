@@ -9,6 +9,7 @@
 
 #include <CL2LaunchMode.h>
 #include <CrossBuildRuntime.h>
+#include <ChildProcessTracker.h>
 
 void Component_RunPreInit()
 {
@@ -41,20 +42,21 @@ void Component_RunPreInit()
 
 		PROCESS_INFORMATION pi;
 
-		BOOL result = CreateProcessW(processName, GetCommandLineW(), nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, nullptr, &si, &pi);
+                BOOL result = CreateProcessW(processName, GetCommandLineW(), nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, nullptr, &si, &pi);
 
-		if (result)
-		{
-			// set the PID and create the game thread
-			hostData->gamePid = pi.dwProcessId;
-			ResumeThread(pi.hThread);
+                if (result)
+                {
+                        childproc::TrackProcess(pi.hProcess, "launch intercept");
+                        // set the PID and create the game thread
+                        hostData->gamePid = pi.dwProcessId;
+                        ResumeThread(pi.hThread);
 
-			// wait for the game process to exit
-			WaitForSingleObject(pi.hProcess, INFINITE);
+                        // wait for the game process to exit
+                        WaitForSingleObject(pi.hProcess, INFINITE);
 
-			TerminateProcess(GetCurrentProcess(), 0);
-		}
-	}
+                        TerminateProcess(GetCurrentProcess(), 0);
+                }
+        }
 	else if (hostData->IsMasterProcess() && debugMode)
 	{
 		hostData->gamePid = GetCurrentProcessId();
