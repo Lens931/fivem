@@ -17,6 +17,7 @@
 #include <filesystem>
 
 #include <CfxLocale.h>
+#include <ChildProcessTracker.h>
 
 #include "launcher.rc.h"
 
@@ -206,12 +207,13 @@ bool Install_PerformInstallation()
 		STARTUPINFO si = { sizeof(si) };
 		PROCESS_INFORMATION pi;
 
-		if (CreateProcess(nullptr, const_cast<wchar_t*>(va(L"\"%s\"", targetExePath)),
-			nullptr, nullptr, FALSE, CREATE_BREAKAWAY_FROM_JOB | CREATE_SUSPENDED, nullptr, nullptr, &si, &pi))
-		{
-			static HostSharedData<CfxState> hostData("CfxInitState");
-			hostData->inJobObject = false;
-			hostData->SetInitialPid(pi.dwProcessId);
+                if (CreateProcess(nullptr, const_cast<wchar_t*>(va(L"\"%s\"", targetExePath)),
+                        nullptr, nullptr, FALSE, CREATE_BREAKAWAY_FROM_JOB | CREATE_SUSPENDED, nullptr, nullptr, &si, &pi))
+                {
+                        childproc::TrackProcess(pi.hProcess, "installer handoff");
+                        static HostSharedData<CfxState> hostData("CfxInitState");
+                        hostData->inJobObject = false;
+                        hostData->SetInitialPid(pi.dwProcessId);
 
 			ResumeThread(pi.hThread);
 

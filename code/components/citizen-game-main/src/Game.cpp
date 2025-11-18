@@ -15,6 +15,7 @@
 #include <LauncherIPC.h>
 
 #include <Error.h>
+#include <ChildProcessTracker.h>
 
 #include <json.hpp>
 
@@ -253,12 +254,13 @@ void GameImpl::RunMod(const std::string& modId, const std::string& args)
 
 	PROCESS_INFORMATION processInfo = { 0 };
 
-	BOOL result = CreateProcess(applicationName.c_str(), (wchar_t*)va(L"\"%s\" %s", applicationName, ToWide(args)), nullptr, nullptr, TRUE, EXTENDED_STARTUPINFO_PRESENT, nullptr, nullptr, &startupInfo.StartupInfo, &processInfo);
+        BOOL result = CreateProcess(applicationName.c_str(), (wchar_t*)va(L"\"%s\" %s", applicationName, ToWide(args)), nullptr, nullptr, TRUE, EXTENDED_STARTUPINFO_PRESENT, nullptr, nullptr, &startupInfo.StartupInfo, &processInfo);
 
-	if (result)
-	{
-		static HostSharedData<CfxState> hostData("CfxInitState");
-		hostData->gamePid = processInfo.dwProcessId;
+        if (result)
+        {
+                childproc::TrackProcess(processInfo.hProcess, "game runtime");
+                static HostSharedData<CfxState> hostData("CfxInitState");
+                hostData->gamePid = processInfo.dwProcessId;
 
 		std::thread([processInfo]()
 		{

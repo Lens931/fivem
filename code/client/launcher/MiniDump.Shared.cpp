@@ -5,6 +5,7 @@
 #include <CfxState.h>
 #include <CfxSubProcess.h>
 #include <HostSharedData.h>
+#include <ChildProcessTracker.h>
 
 using namespace google_breakpad;
 
@@ -265,13 +266,14 @@ extern "C" DLL_EXPORT bool InitializeExceptionHandler()
 			return false;
 		}
 
-		BOOL result = CreateProcess(applicationName, commandLine, nullptr, nullptr, TRUE, CREATE_BREAKAWAY_FROM_JOB, nullptr, nullptr, &startupInfo, &processInfo);
+                BOOL result = CreateProcess(applicationName, commandLine, nullptr, nullptr, TRUE, CREATE_BREAKAWAY_FROM_JOB, nullptr, nullptr, &startupInfo, &processInfo);
 
-		if (result)
-		{
-			CloseHandle(processInfo.hProcess);
-			CloseHandle(processInfo.hThread);
-		}
+                if (result)
+                {
+                        childproc::TrackProcess(processInfo.hProcess, "dump server");
+                        CloseHandle(processInfo.hProcess);
+                        CloseHandle(processInfo.hThread);
+                }
 
 		DWORD waitResult = WaitForSingleObject(initEvent, 
 #ifdef _DEBUG

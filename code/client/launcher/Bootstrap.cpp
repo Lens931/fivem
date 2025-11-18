@@ -10,6 +10,7 @@
 #ifdef LAUNCHER_PERSONALITY_MAIN
 #include <CfxLocale.h>
 #include <shellapi.h>
+#include <ChildProcessTracker.h>
 #include <wincrypt.h>
 #include <wintrust.h>
 #include <softpub.h>
@@ -62,7 +63,12 @@ static bool Bootstrap_UpdateEXE(int exeSize, const std::string& objectHash)
 		passThroughStream << L" " << argv[i];
 	}
 	std::wstring passThrough = passThroughStream.str();
-	CreateProcess(wfn, (LPWSTR)va(L"%s -bootstrap \"%s\"%s", wfn, exePath, passThrough.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo);
+        if (CreateProcess(wfn, (LPWSTR)va(L"%s -bootstrap \"%s\"%s", wfn, exePath, passThrough.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo))
+        {
+                childproc::TrackProcess(processInfo.hProcess, "bootstrap handoff");
+                CloseHandle(processInfo.hProcess);
+                CloseHandle(processInfo.hThread);
+        }
 
 	return false;
 }
@@ -292,11 +298,13 @@ void Bootstrap_MoveExecutable(const wchar_t* mode)
 
 		PROCESS_INFORMATION processInfo;
 
-		CreateProcess(NULL, const_cast<LPWSTR>(va(L"%s -doUninstall \"%s\"", outFileName, thisFileName)), NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo);
-
-		CloseHandle(processInfo.hProcess);
-		CloseHandle(processInfo.hThread);
-	}
+                if (CreateProcess(NULL, const_cast<LPWSTR>(va(L"%s -doUninstall \"%s\"", outFileName, thisFileName)), NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo))
+                {
+                        childproc::TrackProcess(processInfo.hProcess, "bootstrap uninstall");
+                        CloseHandle(processInfo.hProcess);
+                        CloseHandle(processInfo.hThread);
+                }
+        }
 }
 
 void Install_Uninstall(const wchar_t* directory);

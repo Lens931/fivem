@@ -94,21 +94,26 @@ static void RunChildLauncher(bool syncWait = false)
 
 	std::wstring commandLine = va(L"\"%s\" -steamparent:%d", ourPath, GetCurrentProcessId());
 
-	// run the steam parent
-	STARTUPINFO si = { sizeof(STARTUPINFO) };
-	PROCESS_INFORMATION pi;
+        // run the steam parent
+        STARTUPINFO si = { sizeof(STARTUPINFO) };
+        PROCESS_INFORMATION pi = {};
 
-	CreateProcess(ourPath, (wchar_t*)commandLine.c_str(), nullptr, nullptr, FALSE, 0, nullptr, ourDirectory, &si, &pi);
+        if (!CreateProcess(ourPath, (wchar_t*)commandLine.c_str(), nullptr, nullptr, FALSE, 0, nullptr, ourDirectory, &si, &pi))
+        {
+                return;
+        }
 
-	auto wait = [pi = std::move(pi)]()
-	{
-		// wait for it to finish
-		WaitForSingleObject(pi.hProcess, 15000);
+        childproc::TrackProcess(pi.hProcess, "steam child launcher");
 
-		// and close up afterwards
-		CloseHandle(pi.hProcess);
-		CloseHandle(pi.hThread);
-	};
+        auto wait = [pi]() mutable
+        {
+                // wait for it to finish
+                WaitForSingleObject(pi.hProcess, 15000);
+
+                // and close up afterwards
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+        };
 
 	if (syncWait)
 	{
@@ -121,6 +126,7 @@ static void RunChildLauncher(bool syncWait = false)
 }
 
 #include <base64.h>
+#include <ChildProcessTracker.h>
 
 void SteamComponent::Initialize()
 {

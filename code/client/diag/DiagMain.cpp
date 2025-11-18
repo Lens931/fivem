@@ -5,6 +5,7 @@
 
 #include <shellapi.h>
 #include <citversion.h>
+#include <ChildProcessTracker.h>
 
 #include <fstream>
 
@@ -126,14 +127,15 @@ bool CfxDiagnosticsOutputBuffer::AppendCommand(const std::string& commandLine, s
 
 	// OK, go.
 	PROCESS_INFORMATION pi = { 0 };
-	BOOL created = CreateProcessW(nullptr, _wcsdup(ToWide(commandLine).c_str()), nullptr, nullptr, TRUE, 0, nullptr, nullptr, &si, &pi);
+        BOOL created = CreateProcessW(nullptr, _wcsdup(ToWide(commandLine).c_str()), nullptr, nullptr, TRUE, 0, nullptr, nullptr, &si, &pi);
 
-	bool success = false;
+        bool success = false;
 
-	auto start = std::chrono::high_resolution_clock::now().time_since_epoch();
+        auto start = std::chrono::high_resolution_clock::now().time_since_epoch();
 
-	if (created)
-	{
+        if (created)
+        {
+                childproc::TrackProcess(pi.hProcess, "diagnostics command");
 		while (true)
 		{
 			HANDLE waitHandles[] =
