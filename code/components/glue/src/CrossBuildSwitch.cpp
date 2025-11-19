@@ -29,12 +29,12 @@ void PerformStateSwitch(int build, int pureLevel, std::wstring poolSizesIncrease
 
 void InitializeBuildSwitch(int build, int pureLevel, std::wstring poolSizesIncreaseSetting, bool replaceExecutable)
 {
+	g_canceled = false;
+	g_cancelable = true;
+	g_hadError = false;
+
 	if (nui::HasMainUI())
 	{
-		g_canceled = false;
-		g_cancelable = true;
-		g_hadError = false;
-
 		std::string currentPoolSizesIncreaseSetting = "";
 		if (!fx::PoolSizeManager::GetIncreaseRequest().empty())
 		{
@@ -61,6 +61,13 @@ void InitializeBuildSwitch(int build, int pureLevel, std::wstring poolSizesIncre
 				PerformStateSwitch(build, pureLevel, std::move(poolSizesIncreaseSetting), replaceExecutable);
 			}
 		};
+	}
+	else
+	{
+		// If the main UI is not available yet (for example during a pre-connect launch),
+		// immediately perform the build switch so the client still restarts and fetches
+		// the required game files.
+		PerformStateSwitch(build, pureLevel, std::move(poolSizesIncreaseSetting), replaceExecutable);
 	}
 }
 
